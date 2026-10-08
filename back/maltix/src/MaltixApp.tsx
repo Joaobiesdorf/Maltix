@@ -93,10 +93,11 @@ export default function MaltixApp() {
 
   if (!user) return <Onboarding onEnterApp={setUser} />;
   async function leaveAccount() {
+    if (!auth) {
+      setUser(null);
+      return;
+    }
     try {
-      if (!auth) {
-        throw new Error('Firebase Auth is unavailable for this session.');
-      }
       await signOut(auth);
       setUser(null);
     } catch (error) {
