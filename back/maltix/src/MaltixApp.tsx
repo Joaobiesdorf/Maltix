@@ -1,17 +1,49 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import {
   Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Bell, Beer, Check, ChevronDown,
   ChevronRight, CircleHelp, ClipboardList, Clock3, Download, Droplets,
   Factory, Filter, FlaskConical, LayoutDashboard, Menu, MoreHorizontal,
   LogOut, Plus, Search, Settings2, SlidersHorizontal, Thermometer, Users, Wind, X,
+  CalendarDays, ChartArea, Truck, Boxes, LockKeyhole,
 } from 'lucide-react';
 import { initialBatches, initialCustomers, initialMeasurements, initialOrders, initialTanks } from './data';
 import type { Batch, Customer, Measurement, Order, OrderStatus, Tank, TankStatus } from './types';
 import Onboarding, { type DemoUser } from './Onboarding';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from './biesdorf/firebase';
+import BiesdorfDashboard from './biesdorf/pages/Dashboard';
+import BiesdorfOrders from './biesdorf/pages/Pedidos';
+import BiesdorfReports from './biesdorf/pages/Relatorios';
+import BiesdorfCustomers from './biesdorf/pages/Clientes';
+import BiesdorfDeliveries from './biesdorf/pages/Entregas';
+import BiesdorfEquipment from './biesdorf/pages/Equipamentos';
+import BiesdorfEvents from './biesdorf/pages/Eventos';
+import BiesdorfBeerStock from './biesdorf/pages/Cervejas';
 import './onboarding.css';
 
-type View = 'Dashboard' | 'Tanques' | 'Lotes' | 'Pedidos' | 'Clientes';
+type View =
+  | 'Dashboard' | 'Tanques' | 'Lotes' | 'Pedidos' | 'Clientes'
+  | 'Operação Biesdorf' | 'Pedidos Biesdorf' | 'Relatórios' | 'Entregas'
+  | 'Equipamentos' | 'Clientes Biesdorf' | 'Eventos' | 'Estoque de cervejas';
 type ModalKind = 'batch' | 'measurement' | 'customer' | 'order' | null;
+
+const maltixNavigation = [
+  ['Dashboard', LayoutDashboard],
+  ['Tanques', Factory],
+  ['Lotes', FlaskConical],
+  ['Pedidos', ClipboardList],
+  ['Clientes', Users],
+] as const;
+const biesdorfNavigation = [
+  ['Operação Biesdorf', LayoutDashboard],
+  ['Pedidos Biesdorf', ClipboardList],
+  ['Relatórios', ChartArea],
+  ['Entregas', Truck],
+  ['Equipamentos', Factory],
+  ['Clientes Biesdorf', Users],
+  ['Eventos', CalendarDays],
+  ['Estoque de cervejas', Boxes],
+] as const;
 
 const tankStatuses: TankStatus[] = ['Livre', 'Em Fermentação', 'Em Maturação', 'Pronto p/ Envase', 'Higienização/CIP'];
 const orderStatuses: OrderStatus[] = ['Rascunho', 'Confirmado', 'Em Envase/Separação', 'Pronto p/ Envio', 'Entregue'];
@@ -33,9 +65,37 @@ function Badge({ children }: { children: ReactNode }) {
 
 export default function MaltixApp() {
   const [user, setUser] = useState<DemoUser | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => onAuthStateChanged(auth, (firebaseUser) => {
+    if (firebaseUser) {
+      const email = firebaseUser.email ?? '';
+      const fallbackName = email.split('@')[0].replace(/[._-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+      setUser({
+        name: firebaseUser.displayName || fallbackName || 'Cervejeiro',
+        email,
+        breweryName: 'Cervejaria Biesdorf',
+        canAccessBiesdorf: true,
+      });
+    } else {
+      setUser(null);
+    }
+    setAuthReady(true);
+  }), []);
+
+  if (!authReady) return <div className="auth-loading" role="status" aria-label="Verificando sessão"><span /></div>;
 
   if (!user) return <Onboarding onEnterApp={setUser} />;
-  return <App user={user} onSignOut={() => setUser(null)} />;
+  async function leaveAccount() {
+    try {
+      await signOut(auth);
+      setUser(null);
+    } catch (error) {
+      console.error('Erro ao sair da conta:', error);
+      window.alert('Não foi possível encerrar a sessão. Tente novamente.');
+    }
+  }
+  return <App user={user} onSignOut={leaveAccount} />;
 }
 
 function App({ user, onSignOut }: { user: DemoUser; onSignOut: () => void }) {
@@ -178,21 +238,22 @@ function App({ user, onSignOut }: { user: DemoUser; onSignOut: () => void }) {
         </a>
         <div className="workspace-switch">
           <span className="brewery-avatar">B</span>
-          <span className="workspace-copy"><strong>{user.breweryName}</strong><small>Plano de demonstração</small></span>
+          <span className="workspace-copy"><strong>{user.breweryName}</strong><small>{user.canAccessBiesdorf ? 'Acesso Biesdorf' : 'Demonstração Maltix'}</small></span>
           <ChevronDown size={15} />
         </div>
-        <span className="nav-label">OPERAÇÃO</span>
         <nav className="side-nav">
-          {([
-            ['Dashboard', LayoutDashboard],
-            ['Tanques', Factory],
-            ['Lotes', FlaskConical],
-            ['Pedidos', ClipboardList],
-            ['Clientes', Users],
-          ] as const).map(([label, Icon]) => (
-            <button key={label} className={`nav-item ${view === label ? 'nav-active' : ''}`} onClick={() => navigate(label)}>
+          <span className="nav-label">MALTIX · DEMONSTRAÇÃO</span>
+          {maltixNavigation.map(([label, Icon]) => (
+            <button key={label} aria-label={label} className={`nav-item ${view === label ? 'nav-active' : ''}`} onClick={() => navigate(label)}>
               <Icon size={18} strokeWidth={1.8} /><span>{label}</span>
               {label === 'Pedidos' && <span className="nav-count">{activeOrders.length}</span>}
+            </button>
+          ))}
+          <span className="nav-label">BIESDORF · OPERAÇÃO</span>
+          {biesdorfNavigation.map(([label, Icon]) => (
+            <button key={label} aria-label={label} className={`nav-item ${view === label ? 'nav-active' : ''}`} onClick={() => navigate(label)} disabled={!user.canAccessBiesdorf} title={!user.canAccessBiesdorf ? 'Entre com uma conta Biesdorf existente para acessar' : undefined}>
+              <Icon size={18} strokeWidth={1.8} /><span>{label}</span>
+              {!user.canAccessBiesdorf && <LockKeyhole size={13} className="nav-lock" />}
             </button>
           ))}
         </nav>
@@ -202,7 +263,7 @@ function App({ user, onSignOut }: { user: DemoUser; onSignOut: () => void }) {
           <div className="profile">
             <div className="profile-avatar">{user.name.split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()}</div><div className="profile-copy"><strong>{user.name}</strong><small>Administrador</small></div><MoreHorizontal size={18} />
           </div>
-          <button className="nav-item" onClick={onSignOut}><LogOut size={18} /><span>Sair da demonstração</span></button>
+          <button className="nav-item" onClick={onSignOut}><LogOut size={18} /><span>Sair da conta</span></button>
         </div>
       </aside>
 
@@ -232,6 +293,14 @@ function App({ user, onSignOut }: { user: DemoUser; onSignOut: () => void }) {
             customers={customers} onAdd={() => openModal('order')} onStatus={setOrderStatus} />}
           {view === 'Clientes' && <CustomersPage customers={customers.filter((customer) => `${customer.nomeEmpresa} ${customer.cidade} ${customer.documento}`.toLowerCase().includes(search.toLowerCase()))}
             orders={orders} onAdd={() => openModal('customer')} />}
+          {user.canAccessBiesdorf && view === 'Operação Biesdorf' && <BiesdorfDashboard />}
+          {user.canAccessBiesdorf && view === 'Pedidos Biesdorf' && <BiesdorfOrders />}
+          {user.canAccessBiesdorf && view === 'Relatórios' && <BiesdorfReports />}
+          {user.canAccessBiesdorf && view === 'Entregas' && <BiesdorfDeliveries />}
+          {user.canAccessBiesdorf && view === 'Equipamentos' && <BiesdorfEquipment />}
+          {user.canAccessBiesdorf && view === 'Clientes Biesdorf' && <BiesdorfCustomers />}
+          {user.canAccessBiesdorf && view === 'Eventos' && <BiesdorfEvents />}
+          {user.canAccessBiesdorf && view === 'Estoque de cervejas' && <BiesdorfBeerStock />}
         </div>
       </main>
 

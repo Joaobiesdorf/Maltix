@@ -1,6 +1,6 @@
 # Maltix
 
-Plataforma de demonstração para gestão de cervejarias artesanais. O site inclui uma página pública, telas de acesso e cadastro, configuração de cervejaria e um painel interativo de operação.
+Plataforma de gestão para cervejarias artesanais. O Maltix mantém seu onboarding, painel de produção, tanques, lotes e status, e incorpora os módulos operacionais da Cervejaria Biesdorf.
 
 ## Publicar no GitHub Pages
 
@@ -12,7 +12,7 @@ O workflow instala as dependências, constrói o site e publica a aplicação. O
 
 ## Executar localmente
 
-Requer Node.js 18 ou superior.
+Requer Node.js 20 ou superior.
 
 ```bash
 cd back/maltix
@@ -31,4 +31,8 @@ O build é escrito em `back/front/maltix`, que também continua sendo servido pe
 
 ## Sobre contas e dados
 
-GitHub Pages hospeda arquivos estáticos e não oferece autenticação, banco de dados ou envio de formulários. Os fluxos de entrar, criar conta e cadastrar cervejaria neste projeto são demonstrações apenas no navegador: não validam credenciais, não enviam nem persistem os dados e não devem ser usados com senhas ou informações reais. Para uso em produção, conecte um backend e um provedor de autenticação antes de coletar dados.
+Configure as variáveis `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID` e `VITE_FIREBASE_APP_ID` com os valores do projeto Firebase já usado pela Cervejaria Biesdorf. Localmente, elas podem ser fornecidas pelo ambiente ou por um arquivo `.env` não versionado. Para GitHub Pages, cadastre-as como Actions secrets com os mesmos nomes.
+
+O login operacional usa contas Biesdorf já existentes. O cadastro Maltix continua disponível como demonstração local e não cria usuários no Firebase nem concede acesso às coleções operacionais. Os módulos Biesdorf reutilizam as coleções existentes (`pedidos`, `clientes`, `equipamentos`, `eventos` e `cervejas`); esta integração não cria nem migra coleções ou documentos. As telas de produção Maltix (tanques e lotes) continuam usando seus dados locais de demonstração.
+
+Configure as regras do Firebase conforme a política de acesso já adotada pela Cervejaria Biesdorf. O login em uma conta existente não substitui as regras de autorização do Firestore.

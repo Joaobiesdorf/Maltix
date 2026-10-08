@@ -1,0 +1,15 @@
+@import "tailwindcss";
+@source inline("bg-amber-50 text-amber-500 bg-red-50 text-red-500 bg-blue-50 text-blue-500 bg-orange-50 text-orange-500 text-amber-700 text-blue-700 bg-amber-100 bg-blue-100 text-amber-800 text-blue-800 border-amber-200 border-blue-200 hover:bg-amber-200 hover:bg-blue-200 text-amber-400 text-blue-400 hover:bg-amber-50 hover:bg-blue-50 hover:border-amber-300 hover:border-blue-300 hover:text-amber-700 hover:text-blue-700");
+
+@theme {
+  --color-primary: #bd801d;
+  --color-primary-hover: #a96e13;
+  --color-secondary: #182434;
+  --color-accent: #202b3b;
+  --color-surface: #ffffff;
+  --color-background: #f5f6f8;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+.sidebar { overflow-y: auto; }
+.side-nav { max-height: calc(100vh - 350px); overflow-y: auto; }

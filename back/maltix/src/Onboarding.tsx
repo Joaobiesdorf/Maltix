@@ -3,11 +3,14 @@ import {
   ArrowRight, Beer, Check, ChevronRight, CircleCheck, Factory, FlaskConical,
   Gauge, Leaf, LockKeyhole, Mail, ShieldCheck, Sparkles, Users,
 } from 'lucide-react';
+import { sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
+import { auth, isFirebaseConfigured } from './biesdorf/firebase';
 
 export interface DemoUser {
   name: string;
   email: string;
   breweryName: string;
+  canAccessBiesdorf: boolean;
 }
 
 type Stage = 'home' | 'signin' | 'signup' | 'brewery';
@@ -16,17 +19,47 @@ export default function Onboarding({ onEnterApp }: { onEnterApp: (user: DemoUser
   const [stage, setStage] = useState<Stage>('home');
   const [account, setAccount] = useState({ name: '', email: '' });
   const [notice, setNotice] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  function enterWithAccount(name: string, email: string, breweryName = 'Cervejaria de demonstração') {
-    onEnterApp({ name, email, breweryName });
+  function enterWithAccount(name: string, email: string, breweryName = 'Cervejaria de demonstração', canAccessBiesdorf = false) {
+    onEnterApp({ name, email, breweryName, canAccessBiesdorf });
   }
 
-  function submitSignIn(event: FormEvent<HTMLFormElement>) {
+  function firebaseError(error: unknown) {
+    const code = typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : '';
+    const messages: Record<string, string> = {
+      'auth/invalid-credential': 'E-mail ou senha incorretos. Confira seus dados e tente novamente.',
+      'auth/user-not-found': 'Não encontramos uma conta com este e-mail.',
+      'auth/wrong-password': 'Senha incorreta. Confira e tente novamente.',
+      'auth/email-already-in-use': 'Este e-mail já possui uma conta. Faça login.',
+      'auth/weak-password': 'A senha precisa ter pelo menos 8 caracteres.',
+      'auth/too-many-requests': 'Muitas tentativas. Aguarde um pouco antes de tentar novamente.',
+      'auth/network-request-failed': 'Não foi possível conectar. Verifique sua internet e tente novamente.',
+      'auth/operation-not-allowed': 'O login por e-mail e senha precisa ser habilitado no Firebase Authentication.',
+    };
+    return messages[code] ?? 'Não foi possível autenticar sua conta. Tente novamente.';
+  }
+
+  async function submitSignIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const email = String(form.get('email')).trim();
+    const password = String(form.get('password'));
     const name = email.split('@')[0].replace(/[._-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) || 'Cervejeiro';
-    enterWithAccount(name, email);
+    if (!isFirebaseConfigured) {
+      setNotice('O Firebase não está configurado. Defina as variáveis VITE_FIREBASE_* usadas pela Cervejaria Biesdorf.');
+      return;
+    }
+    setBusy(true);
+    setNotice('');
+    try {
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      enterWithAccount(credential.user.displayName || name, credential.user.email || email, 'Cervejaria Biesdorf', true);
+    } catch (error) {
+      setNotice(firebaseError(error));
+    } finally {
+      setBusy(false);
+    }
   }
 
   function submitSignUp(event: FormEvent<HTMLFormElement>) {
@@ -49,6 +82,28 @@ export default function Onboarding({ onEnterApp }: { onEnterApp: (user: DemoUser
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     enterWithAccount(account.name, account.email, String(form.get('breweryName')).trim());
+  }
+
+  async function resetPassword(form: HTMLFormElement | null) {
+    const email = String(new FormData(form ?? undefined).get('email') ?? '').trim();
+    if (!email) {
+      setNotice('Informe seu e-mail para receber o link de recuperação.');
+      return;
+    }
+    if (!isFirebaseConfigured) {
+      setNotice('O Firebase não está configurado. Defina as variáveis VITE_FIREBASE_* usadas pela Cervejaria Biesdorf.');
+      return;
+    }
+    setBusy(true);
+    setNotice('');
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setNotice('Enviamos um link de recuperação para o seu e-mail.');
+    } catch (error) {
+      setNotice(firebaseError(error));
+    } finally {
+      setBusy(false);
+    }
   }
 
   function showSignUp() {
@@ -85,12 +140,12 @@ export default function Onboarding({ onEnterApp }: { onEnterApp: (user: DemoUser
         <form className="public-form" onSubmit={submitSignIn}>
           <Field label="E-mail" icon={<Mail size={16} />}><input name="email" type="email" autoComplete="email" placeholder="voce@sua cervejaria.com.br" required /></Field>
           <Field label="Senha" icon={<LockKeyhole size={16} />}><input name="password" type="password" autoComplete="current-password" minLength={8} placeholder="Sua senha" required /></Field>
-          <button className="forgot-link" type="button" onClick={() => setNotice('A recuperação de senha exige um serviço de autenticação conectado. Esta versão é uma demonstração local.')}>Esqueceu a senha?</button>
+          <button className="forgot-link" type="button" disabled={busy} onClick={(event) => resetPassword(event.currentTarget.form)}>Esqueceu a senha?</button>
           {notice && <p className="form-notice" role="status">{notice}</p>}
-          <button className="public-button public-button-dark public-submit" type="submit">Entrar na demonstração <ArrowRight size={16} /></button>
+          <button className="public-button public-button-dark public-submit" type="submit" disabled={busy}>{busy ? 'Entrando...' : 'Entrar'} <ArrowRight size={16} /></button>
         </form>
-        <p className="auth-switch">Ainda não tem conta? <button onClick={showSignUp}>Criar conta grátis</button></p>
-        <DemoNotice />
+        <p className="auth-switch">Ainda não tem conta? <button onClick={showSignUp}>Criar espaço de demonstração</button></p>
+        <DemoNotice mode="signin" />
       </AuthLayout>}
       {stage === 'signup' && <AuthLayout title="Sua próxima brassagem começa aqui." subtitle="Crie seu acesso e configure o espaço da sua cervejaria.">
         <form className="public-form" onSubmit={submitSignUp}>
@@ -99,10 +154,10 @@ export default function Onboarding({ onEnterApp }: { onEnterApp: (user: DemoUser
           <Field label="Crie uma senha" icon={<LockKeyhole size={16} />}><input name="password" type="password" autoComplete="new-password" minLength={8} placeholder="Mínimo de 8 caracteres" required /></Field>
           <Field label="Confirme sua senha" icon={<LockKeyhole size={16} />}><input name="confirmation" type="password" autoComplete="new-password" minLength={8} placeholder="Digite sua senha novamente" required /></Field>
           {notice && <p className="form-notice" role="alert">{notice}</p>}
-          <button className="public-button public-button-dark public-submit" type="submit">Continuar <ArrowRight size={16} /></button>
+          <button className="public-button public-button-dark public-submit" type="submit" disabled={busy}>{busy ? 'Criando conta...' : 'Continuar'} <ArrowRight size={16} /></button>
         </form>
         <p className="auth-switch">Já tem uma conta? <button onClick={showSignIn}>Fazer login</button></p>
-        <DemoNotice />
+        <DemoNotice mode="signup" />
       </AuthLayout>}
       {stage === 'brewery' && <AuthLayout title="Conte pra gente sobre sua cervejaria." subtitle="Vamos deixar seu espaço de trabalho com a cara da sua operação." step>
         <form className="public-form" onSubmit={submitBrewery}>
@@ -114,10 +169,11 @@ export default function Onboarding({ onEnterApp }: { onEnterApp: (user: DemoUser
           </div>
           <Field label="Cidade"><input name="city" autoComplete="address-level2" placeholder="Sua cidade" required /></Field>
           <Field label="Tamanho da operação"><select name="volume" defaultValue="" required><option value="" disabled>Selecione uma faixa</option><option>Até 1.000 L/mês</option><option>1.000 a 5.000 L/mês</option><option>5.000 a 20.000 L/mês</option><option>Acima de 20.000 L/mês</option></select></Field>
-          <label className="public-checkbox"><input type="checkbox" required /><span>Concordo em usar esta demonstração com dados fictícios. Nenhuma informação será enviada ou salva.</span></label>
-          <button className="public-button public-button-dark public-submit" type="submit">Criar meu espaço <ArrowRight size={16} /></button>
+          <label className="public-checkbox"><input type="checkbox" required /><span>Autorizo criar um espaço Maltix de demonstração local. Os dados desta etapa não serão gravados.</span></label>
+          {notice && <p className="form-notice" role="alert">{notice}</p>}
+          <button className="public-button public-button-dark public-submit" type="submit">Criar espaço de demonstração <ArrowRight size={16} /></button>
         </form>
-        <DemoNotice />
+        <DemoNotice mode="signup" />
       </AuthLayout>}
 
       <footer className="public-footer">
@@ -179,7 +235,7 @@ function Landing({ onSignIn, onSignUp }: { onSignIn: () => void; onSignUp: () =>
       <div className="closing-icon"><Leaf size={23} /></div><div><span>PRONTO PARA O PRÓXIMO LOTE?</span><h2>Mais controle. Mais tempo para criar.</h2></div>
       <button className="public-button public-button-amber" onClick={onSignUp}>Criar minha conta <ArrowRight size={16} /></button>
     </section>
-    <p className="landing-demo-footnote"><ShieldCheck size={14} /> Demonstração interativa: não use senhas nem informações empresariais reais.</p>
+    <p className="landing-demo-footnote"><ShieldCheck size={14} /> A autenticação usa Firebase; os módulos Biesdorf acessam as coleções operacionais existentes.</p>
   </>;
 }
 
@@ -211,6 +267,8 @@ function Field({ label, icon, children }: { label: string; icon?: ReactNode; chi
   return <label className="public-field"><span>{label}</span><span className={`public-input-wrap ${icon ? 'has-field-icon' : ''}`}>{icon}{children}</span></label>;
 }
 
-function DemoNotice() {
-  return <p className="demo-notice"><ShieldCheck size={15} /><span><strong>Modo demonstração.</strong> Não há backend conectado. Use dados fictícios; sua senha não será salva.</span></p>;
+function DemoNotice({ mode }: { mode: 'signin' | 'signup' }) {
+  return mode === 'signin'
+    ? <p className="demo-notice"><ShieldCheck size={15} /><span><strong>Acesso operacional.</strong> Entre com uma conta Biesdorf já existente para consultar e atualizar os dados operacionais.</span></p>
+    : <p className="demo-notice"><ShieldCheck size={15} /><span><strong>Demonstração local.</strong> Este cadastro não cria usuário no Firebase nem concede acesso às coleções Biesdorf.</span></p>;
 }

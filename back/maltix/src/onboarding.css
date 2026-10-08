@@ -9,6 +9,10 @@
   font-family: "DM Sans", sans-serif;
 }
 
+.auth-loading { display: grid; min-height: 100vh; place-items: center; background: #fbfaf7; }
+.auth-loading > span { width: 38px; height: 38px; border: 3px solid #e9d9bb; border-top-color: #bd801d; border-radius: 50%; animation: auth-spin .8s linear infinite; }
+@keyframes auth-spin { to { transform: rotate(360deg); } }
+
 .onboarding button, .onboarding input, .onboarding select { font: inherit; }
 .onboarding button { cursor: pointer; }
 .public-header { display: flex; align-items: center; justify-content: space-between; width: min(100% - 80px, 1280px); height: 82px; margin: 0 auto; }
