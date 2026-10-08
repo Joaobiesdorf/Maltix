@@ -67,27 +67,36 @@ export default function MaltixApp() {
   const [user, setUser] = useState<DemoUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
 
-  useEffect(() => onAuthStateChanged(auth, (firebaseUser) => {
-    if (firebaseUser) {
-      const email = firebaseUser.email ?? '';
-      const fallbackName = email.split('@')[0].replace(/[._-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
-      setUser({
-        name: firebaseUser.displayName || fallbackName || 'Cervejeiro',
-        email,
-        breweryName: 'Cervejaria Biesdorf',
-        canAccessBiesdorf: true,
-      });
-    } else {
-      setUser(null);
+  useEffect(() => {
+    if (!auth) {
+      setAuthReady(true);
+      return;
     }
-    setAuthReady(true);
-  }), []);
+    return onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        const email = firebaseUser.email ?? '';
+        const fallbackName = email.split('@')[0].replace(/[._-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+        setUser({
+          name: firebaseUser.displayName || fallbackName || 'Cervejeiro',
+          email,
+          breweryName: 'Cervejaria Biesdorf',
+          canAccessBiesdorf: true,
+        });
+      } else {
+        setUser(null);
+      }
+      setAuthReady(true);
+    });
+  }, []);
 
   if (!authReady) return <div className="auth-loading" role="status" aria-label="Verificando sessão"><span /></div>;
 
   if (!user) return <Onboarding onEnterApp={setUser} />;
   async function leaveAccount() {
     try {
+      if (!auth) {
+        throw new Error('Firebase Auth is unavailable for this session.');
+      }
       await signOut(auth);
       setUser(null);
     } catch (error) {
@@ -99,7 +108,7 @@ export default function MaltixApp() {
 }
 
 function App({ user, onSignOut }: { user: DemoUser; onSignOut: () => void }) {
-  const [view, setView] = useState<View>('Dashboard');
+  const [view, setView] = useState<View>(user.canAccessBiesdorf ? 'Operação Biesdorf' : 'Dashboard');
   const [tanks, setTanks] = useState(initialTanks);
   const [batches, setBatches] = useState(initialBatches);
   const [measurements, setMeasurements] = useState(initialMeasurements);

@@ -46,7 +46,7 @@ export default function Onboarding({ onEnterApp }: { onEnterApp: (user: DemoUser
     const email = String(form.get('email')).trim();
     const password = String(form.get('password'));
     const name = email.split('@')[0].replace(/[._-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) || 'Cervejeiro';
-    if (!isFirebaseConfigured) {
+    if (!auth || !isFirebaseConfigured) {
       setNotice('O Firebase não está configurado. Defina as variáveis VITE_FIREBASE_* usadas pela Cervejaria Biesdorf.');
       return;
     }
@@ -90,7 +90,7 @@ export default function Onboarding({ onEnterApp }: { onEnterApp: (user: DemoUser
       setNotice('Informe seu e-mail para receber o link de recuperação.');
       return;
     }
-    if (!isFirebaseConfigured) {
+    if (!auth || !isFirebaseConfigured) {
       setNotice('O Firebase não está configurado. Defina as variáveis VITE_FIREBASE_* usadas pela Cervejaria Biesdorf.');
       return;
     }

@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { getApp, getApps, initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
@@ -10,10 +10,14 @@ const firebaseConfig = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
-const isFirebaseConfigured = Object.values(firebaseConfig).every(Boolean);
+const isFirebaseConfigured = Object.values(firebaseConfig).every(
+  (value) => typeof value === "string" && value.trim().length > 0
+);
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+const app = isFirebaseConfigured
+  ? (getApps().length > 0 ? getApp() : initializeApp(firebaseConfig))
+  : null;
+const db = app ? getFirestore(app) : null;
+const auth = app ? getAuth(app) : null;
 
 export { app, db, auth, isFirebaseConfigured };
