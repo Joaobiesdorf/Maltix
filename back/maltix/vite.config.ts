@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     root,
-    base: env.VITE_BASE_PATH || '/maltix/',
+    base: process.env.VITE_BASE_PATH || env.VITE_BASE_PATH || '/maltix/',
     plugins: [react()],
     server: {
       port: 5173,
