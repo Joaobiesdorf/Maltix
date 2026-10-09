@@ -32,7 +32,7 @@ export default function Onboarding({ onEnterApp }: { onEnterApp: (user: DemoUser
       'auth/user-not-found': 'Não encontramos uma conta com este e-mail.',
       'auth/wrong-password': 'Senha incorreta. Confira e tente novamente.',
       'auth/email-already-in-use': 'Este e-mail já possui uma conta. Faça login.',
-      'auth/weak-password': 'A senha precisa ter pelo menos 8 caracteres.',
+      'auth/weak-password': 'A senha precisa ter pelo menos 6 caracteres.',
       'auth/too-many-requests': 'Muitas tentativas. Aguarde um pouco antes de tentar novamente.',
       'auth/network-request-failed': 'Não foi possível conectar. Verifique sua internet e tente novamente.',
       'auth/operation-not-allowed': 'O login por e-mail e senha precisa ser habilitado no Firebase Authentication.',
@@ -139,7 +139,7 @@ export default function Onboarding({ onEnterApp }: { onEnterApp: (user: DemoUser
       {stage === 'signin' && <AuthLayout title="Bom ter você de volta." subtitle="Entre no seu espaço e acompanhe sua operação.">
         <form className="public-form" onSubmit={submitSignIn}>
           <Field label="E-mail" icon={<Mail size={16} />}><input name="email" type="email" autoComplete="email" placeholder="voce@sua cervejaria.com.br" required /></Field>
-          <Field label="Senha" icon={<LockKeyhole size={16} />}><input name="password" type="password" autoComplete="current-password" minLength={8} placeholder="Sua senha" required /></Field>
+          <Field label="Senha" icon={<LockKeyhole size={16} />}><input name="password" type="password" autoComplete="current-password" minLength={6} placeholder="Sua senha" required /></Field>
           <button className="forgot-link" type="button" disabled={busy} onClick={(event) => resetPassword(event.currentTarget.form)}>Esqueceu a senha?</button>
           {notice && <p className="form-notice" role="status">{notice}</p>}
           <button className="public-button public-button-dark public-submit" type="submit" disabled={busy}>{busy ? 'Entrando...' : 'Entrar'} <ArrowRight size={16} /></button>
@@ -151,8 +151,8 @@ export default function Onboarding({ onEnterApp }: { onEnterApp: (user: DemoUser
         <form className="public-form" onSubmit={submitSignUp}>
           <Field label="Seu nome"><input name="name" autoComplete="name" placeholder="Como podemos chamar você?" required /></Field>
           <Field label="E-mail de trabalho" icon={<Mail size={16} />}><input name="email" type="email" autoComplete="email" placeholder="voce@sua cervejaria.com.br" required /></Field>
-          <Field label="Crie uma senha" icon={<LockKeyhole size={16} />}><input name="password" type="password" autoComplete="new-password" minLength={8} placeholder="Mínimo de 8 caracteres" required /></Field>
-          <Field label="Confirme sua senha" icon={<LockKeyhole size={16} />}><input name="confirmation" type="password" autoComplete="new-password" minLength={8} placeholder="Digite sua senha novamente" required /></Field>
+          <Field label="Crie uma senha" icon={<LockKeyhole size={16} />}><input name="password" type="password" autoComplete="new-password" minLength={6} placeholder="Mínimo de 6 caracteres" required /></Field>
+          <Field label="Confirme sua senha" icon={<LockKeyhole size={16} />}><input name="confirmation" type="password" autoComplete="new-password" minLength={6} placeholder="Digite sua senha novamente" required /></Field>
           {notice && <p className="form-notice" role="alert">{notice}</p>}
           <button className="public-button public-button-dark public-submit" type="submit" disabled={busy}>{busy ? 'Criando conta...' : 'Continuar'} <ArrowRight size={16} /></button>
         </form>
